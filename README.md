@@ -2,14 +2,15 @@
 
 ## Shotgun metagenomics
 
-**Step 1**. [Set up the conda environments and reference databases](/group1/step1.md).
+**Step 1**. [Pre-process data](/shotgun/1_preprocess.md).
 
-**Step 2**. [Pre-process data](/group1/step2.md).
+**Step 2a**. [Taxonomical composition - data processing](/shotgun/2_kraken.md)
 
-**Step 3**. Taxonomical composition:
+**Step 2b**. [Taxonomical composition - data analysis](/shotgun/2_kraken.md)
 
-**Step 4**. [Gene content](/group1/step4.md).
+**Step 3a**. [Gene content - data processing](/shotgun/3_functional_analysis.md)
 
+**Step 3b**. [Gene content - data analysis](/shotgun/3_functional_analysis.md)
 
 ## Amplicon metagenomcis
 
