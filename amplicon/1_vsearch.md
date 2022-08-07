@@ -3,7 +3,7 @@ We used VSEARCH to process raw data using the code below:
 ```bash
 PRJ_DIR=$add_path_here
 RAW_DATA=$add_path_here #this path is different for 16S and ITS data
-REFERENCE=$add_path_here #this path is reference.fa for 16S or unite.fa for ITS
+REFERENCE=$add_path_here #this path point to reference.fa for 16S or unite.fa for ITS
 THREADS=16
 CLUSTERID=0.97
 MAXEE=1.0
