@@ -1,8 +1,10 @@
+### MegaHit
+
 As first step, we need to assemble the row reads into contigs (basically we merge short reads into a longer read). For this step we use MegaHit. From this experiment we obtained a massive amount of data, and MegaHit requires too much memory to process it all together. So, here, we are going to perform the contig assebly separately for each sample and later in the pipeline we will merge this output. Using the raw reads filtered from the host reads as input, we can run this code:
 
 ```bash
-DATADIR=$_add_path_here
-OUTDIR=$_add_path_here
+DATADIR=$add_path_here
+OUTDIR=$add_path_here
 
 cd $DATADIR
 
@@ -18,8 +20,8 @@ done
 MegaHit creates a folder for each of our inputs, with a file named `final.contigs.fa` were it stores the information we will need for the nexrt steps. So, running the code below we will create a new folder, take each `final.contigs.fa` file, rename it according to the folder name (which is our sample), and move it to the new folder.
 
 ```bash
-MegahitPATH=$_add_path_here
-MegahitFILES=$_add_path_here
+MegahitPATH=$add_path_here
+MegahitFILES=$add_path_here
 find "$MegahitPATH" -type f -iname 'final.contigs.fa' -exec sh -c '
     path="${1%/*}"; filename="${1##*/}";
     cp -nv "${1}" "$MegahitFILES/${path##*/}.fa" ' sh_cp {} \;
@@ -28,10 +30,9 @@ cd $MegahitFILES
 cat *.fa > allseqs.fa
 ```
 
-Here is a tip. MegaHit gives the same names to the contigs obtained from different files (something like contig1. contig2, ...) and some softwares down in the pipeline do not like to have contigs with the same name within the same `fasta` file. So, here we are going to rename all the contigs in the file we just obtained. First, we need to know how many contigs our file has:
+MegaHit gives the same names to the contigs obtained from different files (something like contig1. contig2, ...) and some softwares down in the pipeline do not like to have contigs with the same name within the same `fasta` file. So, here we are going to rename all the contigs in the file we just obtained. First, we need to know how many contigs our file has:
 
 ```bash
-cd 4c_mh_all
 sed '/^>/d' allseqs.fa | wc -l
 ```
 In our case the result was `29853253`. So we are going to use this number to run the line below.
@@ -40,92 +41,57 @@ In our case the result was `29853253`. So we are going to use this number to run
 for i in {1..29853253}; do echo A_$i; done | paste - <(sed '/^>/d' allseqs.fa) | sed -e 's/^/>/' -e 's/\t/\n/' > new_file.fa
 ```
 
+### Remove duplicate reads
 
-Remove duplicate reads
+We removed duplicate reads to avoid any interference with the pipeline below.
 
 ```bash
-#!/bin/bash
-#SBATCH --nodes=1 --ntasks-per-node=1 --mem=16G
-#SBATCH --time=00:10:00
-#SBATCH --job-name=removedups
-#SBATCH --mail-type=ALL --mail-user=antonino.malacrino@gmail.com
-#SBATCH --account=pas1910
-
-PRJDIR=/users/PAS1609/antoninomalacrino/bennett/selenium_metagenomics
-DATADIR=$PRJDIR/4_megahit2
-
-module load python/3.7-2019.10
-source activate $HOME/conda_envs/seqkit
-
-cd $DATADIR
-
 seqkit rmdup -s < new_file.fa > input.faa
 
 rm allseqs.fa new_file.fa
 ```
 
-Run Prokka:
+### Prokka
+
+And we finally ran Prokka for functional annotation of the contigs identified above. Given that Prokka was not working well with a single file with all the contigs, we optimized this process by breaking it in several files with 10,000 contigs each and processing them in parallel.
 
 ```bash
-#!/bin/bash
-#SBATCH --nodes=1 --ntasks-per-node=32 --mem=128G
-#SBATCH --time=1-00:00:00
-#SBATCH --job-name=runPROKKA
-#SBATCH --mail-type=ALL --mail-user=antonino.malacrino@gmail.com
-#SBATCH --account=pas1910
+DATADIR=$add_path_here
+OUTDIR=$add_path_here
 
-PRJDIR=/users/PAS1609/antoninomalacrino/bennett/selenium_metagenomics
-DATADIR=$PRJDIR/4_megahit2
-OUTDIR=$PRJDIR/5_prokka
-
-cp $DATADIR/input.faa $OUTDIR/input.faa 
-
+cd $DATADIR
+cp input.faa $OUTDIR
 cd $OUTDIR
 
 awk 'BEGIN {n_seq=0;} /^>/ {if(n_seq%100000==0){file=sprintf("myseq%d.fa",n_seq);} print >> file; n_seq++; next;} { print >> file; }' < input.faa
 
-source activate $HOME/conda_envs/prokka
-
 find -name "*.fa" | parallel -j 32 prokka --outdir $OUTDIR --norrna --notrna --metagenome --force --cpus 1 --prefix {}\.prokka {}
 ```
 
-Collate tsv
+Then we collated all `*.tsv` files all together:
 
 ```bash
-mkdir 6_prokka2
-cd 5_prokka
-INDIR=/users/PAS1609/antoninomalacrino/bennett/selenium_metagenomics/6_prokka2
-cp *.tsv $INDIR
-cd ../6_prokka2
+DATADIR=$add_path_here
+OUTDIR=$add_path_here
+
+cd $DATADIR
+cp *.tsv $OUTDIR
+cd $OUTDIR
 awk 'FNR==1 && NR!=1 { while (/^<header>/) getline; } 1 {print}' *.tsv > prokka.txt
 rm *.tsv
 ```
 
-Run bowtie
+### Counts table
+
+Given that we wanted to test the effect of our treatments on the frequency of genes within the microbiome, we used Bowtie to map each sample to the contig map, generating a table with counts for each contig and sample.
+
 
 ```bash
-mkdir 7_bowtie
-mkdir 7_bowtie/input 7_bowtie/output 7_bowtie/final_output
-```
-
-```bash
-#!/bin/bash
-#SBATCH --nodes=1 --ntasks-per-node=16 --mem=64G
-#SBATCH --time=1-00:00:00
-#SBATCH --job-name=runBowtie
-#SBATCH --mail-type=ALL --mail-user=antonino.malacrino@gmail.com
-#SBATCH --account=pas1910
-
-module load python/3.7-2019.10
-source activate $HOME/conda_envs/bowtie2
-
-PRJDIR=/users/PAS1609/antoninomalacrino/bennett/selenium_metagenomics
-
-DATADIR=$PRJDIR/5_prokka
-RAWREADS=$PRJDIR/2_trimgalore
-INDIR=$PRJDIR/7_bowtie/input
-OUTDIR=$PRJDIR/7_bowtie/output
-OUTDIR2=$PRJDIR/7_bowtie/final_output
+DATADIR=$add_path_here
+RAWREADS=$add_path_here
+INDIR=$add_path_here
+OUTDIR=$add_path_here
+OUTDIR2=$add_path_here
 
 cd $DATADIR
 cat *.ffn > prokka.fasta
@@ -151,13 +117,9 @@ cp *.sam $OUTDIR2
 
 cd $OUTDIR2
 
-conda deactivate
-
-source activate $HOME/conda_envs/samtools
-
-for x in *.sam
+for file in *.sam
 do
-  f=`basename $x .sam`;
+  f=`basename $file .sam`;
   echo $f;
   samtools view -@ 16 -bS ${f}.sam > ${f}.bam;
   samtools sort -@ 16 ${f}.bam -o ${f}.sorted;
@@ -167,7 +129,7 @@ done
 
 ```
 
-Save this file as `get_count_table.py`
+And to generate the count table we used this script in Python 2.7 (`get_count_table.py`)
 
 ```bash
 #!/usr/bin/python
@@ -207,30 +169,11 @@ for i in range(0,len(ids)):
     print '\t'.join(result)
 ```
 
-Run
+and running the is with:
 
 ```bash
-#!/bin/bash
-#SBATCH --nodes=1 --ntasks-per-node=1 --mem=16G
-#SBATCH --time=06:00:00
-#SBATCH --job-name=getCounts
-#SBATCH --mail-type=ALL --mail-user=antonino.malacrino@gmail.com
-#SBATCH --account=pas1910
-
-PRJDIR=/users/PAS1609/antoninomalacrino/bennett/selenium_metagenomics
-DATADIR=$PRJDIR/7_bowtie/final_output
-
-cd $DATADIR
-
-module load python/2.7-conda5.2
-
 python get_count_table.py *.idxstats.txt > count.txt
-
 awk 'FNR == 1{print;next}{for(i=3;i<=NF;i++) if($i > 100){print;next}}' count.txt > count2.txt
 ```
 
-
-
-
-
-
+The last line of code was used to reduce the dimensions of the file by removing all contigs with less than 100 counts across all samples.
