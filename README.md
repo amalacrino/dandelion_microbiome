@@ -2,7 +2,7 @@
 
 ## Shotgun metagenomics
 
-**Step 1**. [Pre-process data](/shotgun/1_preprocess.md).
+**Step 1**. [Pre-process data](/shotgun/1_preprocess.md)
 
 **Step 2a**. [Taxonomical composition - data processing](/shotgun/2_kraken.md)
 
@@ -14,8 +14,6 @@
 
 ## Amplicon metagenomcis
 
-Step 1. Set up the R environment.
+Step 1. [Pre-process data](/amplicon/1_vsearch.md)
 
-Step 2. Pre-process data.
-
-Step 3. Data-analysis.
+Step 2. Data-analysis.
