@@ -24,11 +24,11 @@ Our pipeline included:
 
 **Step 2a**. [Taxonomical composition - data processing](/shotgun/2_kraken.md)
 
-**Step 2b**. [Taxonomical composition - data analysis](/shotgun/2_kraken.md)
+**Step 2b**. [Taxonomical composition - data analysis](/shotgun/4_taxonomy_analysis.md)
 
 **Step 3a**. [Gene content - data processing](/shotgun/3_functional_analysis.md)
 
-**Step 3b**. [Gene content - data analysis](/shotgun/3_functional_analysis.md)
+**Step 3b**. [Gene content - data analysis](/shotgun/5_gene_content_analysis.md)
 
 ## Amplicon metagenomcis
 
