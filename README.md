@@ -22,16 +22,12 @@ Our pipeline included:
 
 **Step 1**. [Pre-process data](/shotgun/1_preprocess.md)
 
-**Step 2a**. [Taxonomical composition - data processing](/shotgun/2_kraken.md)
+**Step 2**. [Gene content - data processing](/shotgun/3_functional_analysis.md)
 
-**Step 2b**. [Taxonomical composition - data analysis](/shotgun/4_taxonomy_analysis.md)
-
-**Step 3a**. [Gene content - data processing](/shotgun/3_functional_analysis.md)
-
-**Step 3b**. [Gene content - data analysis](/shotgun/5_gene_content_analysis.md)
+**Step 3**. [Gene content - data analysis](/shotgun/5_gene_content_analysis.md)
 
 ## Amplicon metagenomcis
 
 Step 1. [Pre-process data](/amplicon/1_vsearch.md)
 
-Step 2. Data-analysis.
+Step 2. [Data-analysis](/amplicon/2_R_code.md)
