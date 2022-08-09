@@ -12,7 +12,7 @@ This repository contains the main components used to process the raw data and to
 Our pipeline included:
 * TrimGalore [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5127899.svg)](https://doi.org/10.5281/zenodo.5127899)
 * Kraken2 (Wood et al. [2019](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1891-0))
-* MegaHit (Li et al. [2016](10.1016/j.ymeth.2016.02.020))
+* MegaHit (Li et al. [2016](https://www.sciencedirect.com/science/article/abs/pii/S1046202315301183?via%3Dihub))
 * Prokka [![DOI:10.1093/bioinformatics/btu153](https://zenodo.org/badge/DOI/10.1093/bioinformatics/btu153.svg)](https://doi.org/10.1093/bioinformatics/btu153)
 * Bowtie2 (Langmead et al. [2019](https://academic.oup.com/bioinformatics/article/35/3/421/5055585))
 * VSEARCH (Rognes et al. [2016](https://peerj.com/articles/2584/))
