@@ -32,4 +32,4 @@ Our pipeline included:
 
 ## 3. Data analysis
 
-[Data-analysis](/amplicon/2_R_code.md)
+[Data-analysis](/data_analysis/1_data_analysis.md)
