@@ -348,3 +348,49 @@ df <- df %>%
       chi_sq = chisq.test(c(NIL, RNAi))$statistic,
       p_val = chisq.test(c(NIL, RNAi))$p.value)
 ```
+
+### Test for differential abundance at the genus level
+
+```r
+tax.fun <- function(psobject, compartment, plant_genotype, treatment, plant_genotype2, treatment2, test){
+  glom <- microbiome::aggregate_taxa(psobject, "Genus")
+  dat <- psmelt(glom)
+  dat <- dat %>% dplyr::group_by(Sample, sample_type, plant_genotype, treatment, Genus) %>% dplyr::summarize(cs = mean(Abundance)) %>% dplyr::mutate(cs = cs/sum(cs)) 
+  filt.gen <- dat %>% dplyr::group_by(Genus) %>% dplyr::summarize(mean = mean(cs)) %>% dplyr::filter(mean <= 0.01)
+  dat <- subset(dat, !(Genus %in% filt.gen$Genus))
+  dat <- dat[which(dat$sample_type == sample_type & dat$plant_genotype == plant_genotype & dat$treatment == treatment |
+                     dat$sample_type == sample_type & dat$plant_genotype == plant_genotype2 & dat$treatment == treatment2),]
+  group.host <- group_by(dat, Genus)
+  list.bact <-unique(c(as.character(group.host$Genus)))
+  
+  model_calculator <- sapply(list.bact,  
+                             function(x){
+                               data.s <- group.host[which(group.host$Genus==x),]
+                               model <- if(test == "plant_genotype"){lm(cs ~ plant_genotype, data = data.s)}else{lm(cs ~ treatment, data = data.s)}
+                               aaa <-  Anova(model)
+                               aaa$sig = c(rep('',length(aaa$`Pr(>F)`)))
+                               makeStars <- function(x){
+                                 stars <- c("****", "***", "**", "*", "ns")
+                                 vec <- c(0, 0.0001, 0.001, 0.01, 0.05, 1)
+                                 i <- findInterval(x, vec)
+                                 stars[i] }
+                               aaa$sig <- makeStars(aaa$`Pr(>F)`)
+                               aaa <- aaa[1,]
+                               return(aaa)},
+                             simplify = FALSE,USE.NAMES = TRUE)
+  res <- do.call(rbind, model_calculator)
+  res <- setDT(res, keep.rownames = TRUE)[]
+  
+  dat2 <- if(test == "plant_genotype"){dat %>% dplyr::group_by(Genus, plant_genotype) %>% dplyr::summarize(cs = mean(cs))}else{dat %>% dplyr::group_by(Genus, treatment) %>% dplyr::summarize(cs = mean(cs))}
+  res$group1  <- if(test == "plant_genotype"){dat2[which(dat2$plant_genotype == "Wt"),]$cs}else{dat2[which(dat2$treatment == treatment),]$cs}
+  res$group2  <- if(test == "plant_genotype"){dat2[which(dat2$plant_genotype == "RNAi"),]$cs}else{dat2[which(dat2$treatment == treatment2),]$cs}
+  
+  colnames(res)[7] <- if(test == "plant_genotype"){"Wt"}else{paste0(treatment)}
+  colnames(res)[8] <- if(test == "plant_genotype"){"RNAi"}else{paste0(treatment2)}
+  
+  res <- res[which(res$`Pr(>F)` < 0.05),]
+  return(res)
+}
+
+df <- tax.fun(ps.16s, "root", "RNAi", "wounding", "RNAi", "noherb", "treatment")
+```
