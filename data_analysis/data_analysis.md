@@ -251,3 +251,100 @@ list.diff <- function(dataset, psobject, direction, subset){
 
 p2 <- list.diff.asvs(df.dt.16s.rh, ps.16S, "up", "Wt_herb")
 ```
+
+### Test if the number of differential taxa (genes) are different from random
+
+```r
+generate.rand.ps <- function(psobject){
+  psx <- psobject
+  ps <- as.data.frame(otu_table(psx))
+  set.seed(100)
+  otu <- randomizeMatrix(ps,null.model = "frequency",iterations = 1000)
+  otu_table(psx) <- otu_table(otu, taxa_are_rows = TRUE)
+  return(psx)
+}
+
+random.test <- function(dataset, datasetRandom, direction){
+  dds <- lapply(dataset, selection.diff.taxa, direction = direction)
+  dds.rand <- lapply(datasetRandom, selection.diff.taxa, direction = direction)
+  
+  d1 <- dds[['d1']]$rn
+  d2 <- dds[['d2']]$rn
+  d3 <- dds[['d3']]$rn
+  d4 <- dds[['d4']]$rn
+  
+  d1.r <- dds.rand[['d1']]$rn
+  d2.r <- dds.rand[['d2']]$rn
+  d3.r <- dds.rand[['d3']]$rn
+  d4.r <- dds.rand[['d4']]$rn
+  
+  df <- data.frame(Group = c("Wt_herb", "Wt_wound", "RNAi_herb", "RNAi_wound"),
+                   Observed_OTUs = c(length(d1), 
+                                     length(d2), 
+                                     length(d3),
+                                     length(d4)),
+                   Random_OTUs =   c(length(d1.r), 
+                                     length(d2.r), 
+                                     length(d3.r),
+                                     length(d4.r)))
+  
+  df <- df %>%
+    dplyr::rowwise() %>% 
+    dplyr::mutate(
+      chi_sq = if(Observed_OTUs == 0 & Random_OTUs == 0){NA}else{chisq.test(c(Observed_OTUs, Random_OTUs))$statistic},
+      p_val = if(Observed_OTUs == 0 & Random_OTUs == 0){NA}else{chisq.test(c(Observed_OTUs, Random_OTUs))$p.value})
+  return(df)
+}
+
+df.dt.16s.rh <- process.diff.taxa(ps.16S, "rhizosphere", rand = "F")
+df.dt.16s.rh.rand <- process.diff.taxa(ps.16S, "rhizosphere", rand = "T")
+rnd.test <- random.test(df.dt.16s.rh, df.dt.16s.rh.rand, "none")
+```
+
+### Number of OTUs unique to each group
+
+```r
+nrotusfun <- function(psobject, compartment, treatment, genotype){
+  ks <- sample_data(psobject)[["sample_type"]] %in% paste0(compartment)
+  ps <- prune_samples(samples = ks, psobject)
+  ks <- sample_data(ps)[["treatment"]] %in% paste0(treatment)
+  ps <- prune_samples(samples = ks, ps)
+  ks <- sample_data(ps)[["plant_genotype"]] %in% paste0(genotype)
+  ps <- prune_samples(samples = ks, ps)
+
+  ps.nrotus <- filter_taxa(ps, function (x) {sum(x > 0) > 1}, prune=TRUE)
+  list1 <- row.names(as.data.frame(otu_table(ps.nrotus)))
+  
+  ks <- sample_data(psobject)[["sample_type"]] %in% paste0(compartment)
+  ps <- prune_samples(samples = ks, psobject)
+  ks <- sample_data(ps)[["treatment"]] %in% "noherb"
+  ps <- prune_samples(samples = ks, ps)
+  ks <- sample_data(ps)[["plant_genotype"]] %in% paste0(genotype)
+  ps <- prune_samples(samples = ks, ps)
+
+  ps.nrotus <- filter_taxa(ps, function (x) {sum(x > 0) > 1}, prune=TRUE)
+  list2 <- row.names(as.data.frame(otu_table(ps.nrotus)))
+  
+  list <- list1[!(list1 %in% list2)]
+  
+  return(list)
+}
+
+
+df <- data.frame(compartment = c("rhizosphere", "rhizosphere", "root", "root"),
+                 treatment = c("herbivory", "wounding", "herbivory", "wounding"),
+                 NIL = c(length(nrotusfun(ps.16S, "rhizosphere", "herb", "Wt")),
+                         length(nrotusfun(ps.16S, "rhizosphere", "wounding", "Wt")),
+                         length(nrotusfun(ps.16S, "root", "herb", "Wt")),
+                         length(nrotusfun(ps.16S, "root", "wounding", "Wt"))),
+                 RNAi = c(length(nrotusfun(ps.16S, "rhizosphere", "herb", "RNAi")),
+                          length(nrotusfun(ps.16S, "rhizosphere", "wounding", "RNAi")),
+                          length(nrotusfun(ps.16S, "root", "herb", "RNAi")),
+                          length(nrotusfun(ps.16S, "root", "wounding", "RNAi"))))
+  
+df <- df %>%
+    dplyr::rowwise() %>% 
+    dplyr::mutate(
+      chi_sq = chisq.test(c(NIL, RNAi))$statistic,
+      p_val = chisq.test(c(NIL, RNAi))$p.value)
+```
