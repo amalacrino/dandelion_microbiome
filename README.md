@@ -18,16 +18,18 @@ Our pipeline included:
 * VSEARCH (Rognes et al. [2016](https://peerj.com/articles/2584/))
 * R  (R Core Team [2022](https://www.R-project.org/))
 
-## Amplicon metagenomics
+# Code
 
-Step 1. [Pre-process data](/amplicon/1_vsearch.md)
+## 1. Amplicon metagenomics
 
-Step 2. [Data-analysis](/amplicon/2_R_code.md)
+[Process data](/amplicon/1_vsearch.md)
 
-## Shotgun metagenomics
+## 2. Shotgun metagenomics
 
-**Step 1**. [Pre-process data](/shotgun/1_preprocess.md)
+[Pre-process data](/shotgun/1_preprocess.md)
 
-**Step 2**. [Gene content - data processing](/shotgun/3_functional_analysis.md)
+[Gene content - data processing](/shotgun/3_functional_analysis.md)
 
-**Step 3**. [Gene content - data analysis](/shotgun/5_gene_content_analysis.md)
+## 3. Data analysis
+
+[Data-analysis](/amplicon/2_R_code.md)
