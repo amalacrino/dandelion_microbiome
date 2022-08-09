@@ -165,3 +165,89 @@ bayes_R2(a)
 bayes.test.posteriors(a)
 ```
 
+### Magnitude of change compared to the control group
+
+The code below selects a specific compartments and compares each treatment to the respective control, returning a list of log2FC values for each OTU for each group.
+
+```r
+process.diff.taxa <- function(psobject, compartment, rand){
+  ps <- if(rand == "F"){x}else{generate.rand.ps(x)}
+  ps.pmv <- prune_samples(sample_data(ps)$sample_type == compartment, ps)
+  sampledf <- data.frame(sample_data(ps.pmv))
+  GM.diff.taxa <- ps.pmv
+  GM.diff.taxa.wt <- subset_samples(GM.diff.taxa, plant_genotype == "Wt")
+  GM.diff.taxa.rnai <- subset_samples(GM.diff.taxa, plant_genotype == "RNAi")
+  
+  dds <- vector("list", length = 4)
+  names(dds) <- c("d1", "d2", "d3", "d4")
+  
+  dds$d1 <- cal.diff.taxa(GM.diff.taxa.wt, "herb", "noherb", factor = "treatment")
+  dds$d2 <- cal.diff.taxa(GM.diff.taxa.wt, "wounding", "noherb", factor = "treatment")
+  dds$d3 <- cal.diff.taxa(GM.diff.taxa.rnai, "herb", "noherb", factor = "treatment")
+  dds$d4 <- cal.diff.taxa(GM.diff.taxa.rnai, "wounding", "noherb", factor = "treatment")
+  return(dds)
+}
+
+magnitude.treatment <- function(dds){
+  d1 <- dds$d1
+  d2 <- dds$d2
+  d3 <- dds$d3
+  d4 <- dds$d4
+  
+  d1$group <- "Wt_herbivory"
+  d2$group <- "Wt_wounding"
+  d3$group <- "RNAi_herbivory"
+  d4$group <- "RNAi_wounding"
+  
+  tx <- rbind(d1, d2, d3, d4)
+  tx$log2FoldChange <- abs(tx$log2FoldChange)
+  return(tx)
+}
+
+df.dt.16s.rh <- process.diff.taxa(ps.16S, "rhizosphere", rand = "F")
+df.dt.16s.rh2 <- magnitude.treatment(df.dt.16s.rh)
+
+model <- lmer(log2FoldChange ~ group * (1|rn), data = df.dt.its.rh2)
+Anova(model)
+m1 <- emmeans(model, "group")
+pairs(m1)
+```
+
+### Identify differentially abundant (frequent) taxa (genes)
+
+```r
+list.diff <- function(dataset, psobject, direction, subset){
+  dds <- lapply(dataset, selection.diff.taxa, direction = direction)
+  '%ni%' <- Negate('%in%')
+  
+  d1 <- dds$d1
+  d2 <- dds$d2
+  d3 <- dds$d3
+  d4 <- dds$d4
+  
+  tax.table <- if(deparse(substitute(psobject)) == "ps.genecontent"){
+    genes.table}else{
+      as.data.frame(tax_table(psobject))[,c(6,7)]
+    }
+  
+  dx <- if(subset == "Wt_herb"){d1[which(d1$rn %ni% d2$rn)]
+  } else if(subset == "Wt_wound"){d2[which(d2$rn %ni% d1$rn)]
+  } else if(subset == "RNAi_herb"){d3[which(d3$rn %ni% d4$rn)]
+  } else {d4[which(d4$rn %ni% d3$rn)]}
+  
+  tx <- if(deparse(substitute(psobject)) == "ps.genecontent"){
+    tax.table[which(tax.table$locus_tag %in% dx$rn),]}else{
+      tax.table[which(row.names(tax.table) %in% dx$rn),]
+    }
+  
+  tx <- cbind(dx, tx)
+
+  tx <- if(deparse(substitute(y)) == "ps.genecontent"){
+    tx[order(tx$product),]}else{
+      tx[order(tx$Genus),]
+    }
+  return(tx)
+}
+
+p2 <- list.diff.asvs(df.dt.16s.rh, ps.16S, "up", "Wt_herb")
+```
