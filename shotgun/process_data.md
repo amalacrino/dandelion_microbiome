@@ -1,5 +1,7 @@
 ### TrimGalore
 
+We used TrimGalore to clean raw data from adaptors and low quality reads.
+
 ```bash
 DATADIR=$add_path_here
 OUTDIR=$add_path_here
@@ -10,6 +12,8 @@ find -name "*_R1.fq.gz" | cut -d "_" -f1 | parallel -j $nthreads trim_galore --i
 ```
 
 ### Remove host plant reads
+
+We used bowtie to map raw data to the *T. koksaghyz* reference genome. The, we used samtools to select reads mapping the host plant genome and convert them back into fastq files to be used for downstream analyses.
 
 ```bash
 DATADIR=$add_path_here
@@ -42,7 +46,7 @@ done
 
 ### MegaHit
 
-As first step, we need to assemble the row reads into contigs (basically we merge short reads into a longer read). For this step we use MegaHit. From this experiment we obtained a massive amount of data, and MegaHit requires too much memory to process it all together. So, here, we are going to perform the contig assebly separately for each sample and later in the pipeline we will merge this output. Using the raw reads filtered from the host reads as input, we can run this code:
+We assembled the raw reads into contigs using MegaHit. From this experiment we obtained a massive amount of data, and MegaHit requires too much memory to process it all together. So, here, we are going to perform the contig assebly separately for each sample and later in the pipeline we will merge this output. Using the raw reads filtered from the host reads as input, we can run this code:
 
 ```bash
 DATADIR=$add_path_here
@@ -59,7 +63,7 @@ do
 done 
 ```
 
-MegaHit creates a folder for each of our inputs, with a file named `final.contigs.fa` were it stores the information we will need for the nexrt steps. So, running the code below we will create a new folder, take each `final.contigs.fa` file, rename it according to the folder name (which is our sample), and move it to the new folder.
+MegaHit creates a folder for each of our inputs, with a file named `final.contigs.fa` were it stores the information we will need for the nexrt steps. So, running the code below we will take each `final.contigs.fa` file, rename it according to the folder name (which is our sample), and move it to the new folder.
 
 ```bash
 MegahitPATH=$add_path_here
@@ -85,7 +89,7 @@ for i in {1..29853253}; do echo A_$i; done | paste - <(sed '/^>/d' allseqs.fa) |
 
 ### Remove duplicate reads
 
-We removed duplicate reads to avoid any interference with the pipeline below.
+We removed duplicate contigs to avoid any interference with the pipeline below.
 
 ```bash
 seqkit rmdup -s < new_file.fa > input.faa
@@ -125,7 +129,7 @@ rm *.tsv
 
 ### Counts table
 
-Given that we wanted to test the effect of our treatments on the frequency of genes within the microbiome, we used Bowtie to map each sample to the contig map, generating a table with counts for each contig and sample.
+Given that we wanted to test the effect of our treatments on the frequency of genes within the microbiome, we used Bowtie to map each sample to the contig reference, generating a table with counts for each contig and sample.
 
 
 ```bash
@@ -171,7 +175,7 @@ done
 
 ```
 
-And to generate the count table we used this script in Python 2.7 (`get_count_table.py`)
+And to generate the count table we used this script in Python 2.7 (`get_count_table.py`) obtained from [here](https://github.com/edamame-course/Metagenome/blob/master/get_count_table.py)
 
 ```bash
 #!/usr/bin/python
@@ -211,11 +215,15 @@ for i in range(0,len(ids)):
     print '\t'.join(result)
 ```
 
-and running the is with:
+and running it with:
 
 ```bash
 python get_count_table.py *.idxstats.txt > count.txt
+```
+
+And, finally, reducing the dimensions of the file by removing all contigs with less than 100 counts across all samples.
+
+```bash
 awk 'FNR == 1{print;next}{for(i=3;i<=NF;i++) if($i > 100){print;next}}' count.txt > count2.txt
 ```
 
-The last line of code was used to reduce the dimensions of the file by removing all contigs with less than 100 counts across all samples.
