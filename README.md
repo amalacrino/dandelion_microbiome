@@ -20,16 +20,8 @@ Our pipeline included:
 
 # Code
 
-## 1. Amplicon metagenomics
+### **Step 1.** [Process amplicon metagenomics data](/amplicon/process_data.md)
 
-[Process data](/amplicon/1_vsearch.md)
+### **Step 2.** [Process shotgun metagenomics data](/shotgun/process_data.md)
 
-## 2. Shotgun metagenomics
-
-[Pre-process data](/shotgun/1_preprocess.md)
-
-[Gene content - data processing](/shotgun/3_functional_analysis.md)
-
-## 3. Data analysis
-
-[Data-analysis](/data_analysis/1_data_analysis.md)
+### **Step 3.** [Analyze data](/data_analysis/data_analysis.md)
